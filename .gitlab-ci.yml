@@ -1,0 +1,80 @@
+stages:
+  - lint
+  - tests
+  - archive  
+
+variables:
+   DOCKER_IMAGE: registry.gitlab.com/damiendeberthe/docker-images/ansible-molecule:20112022
+
+ansible-lint:
+  stage: lint
+  image: "${DOCKER_IMAGE}"
+  script:
+    - ansible-lint
+
+yamllint:
+  stage: lint
+  image: "${DOCKER_IMAGE}"
+  script:
+    - yamllint .
+
+ansible_syntax-check:
+  stage: tests
+  image: "${DOCKER_IMAGE}"
+  script:
+    - ansible-playbook molecule/default/converge.yml --syntax-check
+  rules:
+    - exists:
+      - molecule/
+
+molecule_docker:
+  stage: tests
+  image: "${DOCKER_IMAGE}"
+  services:
+  - docker:dind
+  script:
+    - molecule test
+  artifacts:
+    paths:
+      - report.html
+    expose_as: "Test reporting html"
+    expire_in: "2 days"
+    reports:
+      junit: report.xml
+  rules:
+    - exists:
+      - molecule/
+    - changes:
+      - "defaults/*"
+      - "handlers/*"
+      - "meta/*"
+      - "tasks/*"
+      - "vars/*"
+
+molecule_vm:
+  stage: tests
+  image: "${DOCKER_IMAGE}"
+  services:
+  - docker:dind
+  script:
+    - echo "molecule_vm"
+  rules:
+    - exists:
+      - molecule/
+  when: manual
+
+create_and_upload:
+  stage: archive
+  image: "${DOCKER_IMAGE}"
+  variables:
+    ARCHIVE_NAME: "${CI_PROJECT_NAME}"
+    ARCHIVE_VERSION: "${CI_COMMIT_TAG}"
+  script:
+    - tar --exclude=".gitignore" --exclude=".yamllint" --exclude="molecule" --exclude=".gitlab-ci.yml" --exclude=".git" --exclude="report.html" -czvf ${ARCHIVE_NAME}-${ARCHIVE_VERSION}.tgz -C . .
+    - 'curl --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file ${ARCHIVE_NAME}-${ARCHIVE_VERSION}.tgz "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/${ARCHIVE_NAME}/${ARCHIVE_VERSION}/${ARCHIVE_NAME}-${ARCHIVE_VERSION}.tgz"'
+    - 'curl --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file report.html "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/${ARCHIVE_NAME}/${ARCHIVE_VERSION}/report.html"'
+  artifacts:
+    paths:
+    - ${ARCHIVE_NAME}-${ARCHIVE_VERSION}.tgz
+  only:
+    - tags
