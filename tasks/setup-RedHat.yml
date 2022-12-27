@@ -1,0 +1,16 @@
+---
+
+- name: Add Docker yum repository.
+  yum_repository:
+    name: docker
+    description: docker yum repo
+    baseurl: "{{ docker_yum_repo }}"
+    gpgcheck: "{{ docker_repo_gpgcheck | default('true') }}"
+  become: true
+
+- name: Install Docker packages.
+  yum:
+    name: "{{ item }}"
+  loop: "{{ docker_packages }}"
+  become: true
+  notify: Restart docker

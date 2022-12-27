@@ -1,0 +1,17 @@
+---
+# defaults file for docker
+
+# Internet or local
+docker_install: local
+
+docker_apt_repo_url: "https://download.docker.com/linux"
+docker_apt_repo: "deb [archo=amd64] {{ docker_apt_repo_url }}/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable"
+
+docker_yum_repo_url: "https://download.docker.com/linux/rhel/docker-ce.repo"
+docker_gpgcheck: true
+
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-compose-plugin

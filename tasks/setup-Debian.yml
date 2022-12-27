@@ -1,0 +1,46 @@
+---
+
+- name: Install prerequisite.
+  apt:
+    pkg:
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+    update_cache: true
+  become: true
+
+- name: Create folder for Docker official GPG key.
+  file:
+    name: /etc/apt/keyrings
+    state: directory
+    mode: 0755
+  become: true
+  when: docker_install == "internet"
+
+- name: Check Docker official GPG key.
+  stat:
+    path: /etc/apt/keyrings/docker.gpg
+  register: r_docker_gpg_key
+  when: docker_install == "internet"
+
+- name: Add Docker official GPG key.
+  shell: |
+    set -o pipefail
+    "curl -fsSL https://download.docker.com/linux/ubuntu/gpg && false | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg"
+  when: docker_install == "internet" and not r_docker_gpg_key.stat.exists
+
+- name: Add Docker repository.
+  apt_repository:
+    repo: "{{ docker_apt_repo }}"
+    state: present
+    validate_certs: "{{ docker_repo_gpgcheck | default('true') }}"
+    update_cache: true
+  become: true
+
+- name: Install Docker packages.
+  apt:
+    name: "{{ item }}"
+    update_cache: true
+  loop: "{{ docker_packages }}"
+  become: true

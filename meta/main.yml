@@ -1,0 +1,16 @@
+---
+
+galaxy_info:
+  namespace: damiendeberthe
+  author: Damien Deberthe
+  role_name: docker
+  description: docker
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Debian
+  galaxy_tags:
+    - damiendeberthe
+    - role
+    - docker
+dependencies: []
